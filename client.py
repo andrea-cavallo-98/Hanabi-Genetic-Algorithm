@@ -15,17 +15,14 @@ from rules import print_state
 ###
 
 
-
-if len(argv) < 4:
-    print("You need the player name to start the game.")
-    #exit(-1)
-    playerName = "Test" # For debug
-    ip = HOST
-    port = PORT
+if len(argv) < 5:
+    print("Wrong number of arguments. Expected <ip> <port> <playerName> <numberOfGames>")
+    exit(-1)
 else:
     playerName = argv[3]
     ip = argv[1]
     port = int(argv[2])
+    number_of_games = int(argv[4])
 
 run = True
 
@@ -115,7 +112,6 @@ def play(s, playerName, player, strategy):
         state = s.recv(DATASIZE)
     # Choose move according to strategy and current state
     data = player.play(state, strategy)
-    print(f"Player {playerName} performs action: {type(data)}")
     # Perform action
     s.send(data.serialize())
 
@@ -130,18 +126,35 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         print("Connection accepted by the server. Welcome " + playerName)
     print("[" + playerName + " - " + status + "]: ", end="")
     #Thread(target=manageInput).start()
+
+    # Send the "ready" message
     s.send(GameData.ClientPlayerStartRequest(playerName).serialize())
     player = None
     strategy = None
+    game_over = False
+    first_player = None
+    received_unexpected = []
+    total_score = 0
+    played_games = 0
 
     while run:
         
+        if game_over:
+            game_over = False
+            player.reset()
+            if first_player == playerName: # If I have to start, I play a move
+                play(s, playerName, player, strategy)
+
         dataOk = False
-        data = s.recv(DATASIZE)
+        if len(received_unexpected) > 0:
+            data = received_unexpected.pop(0)
+        else:
+            data = s.recv(DATASIZE)
+            data = GameData.GameData.deserialize(data)
+
         if not data:
             continue
-        data = GameData.GameData.deserialize(data)
-
+        
         if type(data) is GameData.ServerPlayerStartRequestAccepted:
             dataOk = True
             print("Ready: " + str(data.acceptedStartRequests) + "/"  + str(data.connectedPlayers) + " players")
@@ -156,6 +169,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             # Initialize player object and select strategy corresponding to number of players
             if player == None:
                 player = Player(playerName, data.players)
+                print(f"Selecting strategy for {len(data.players)} players")
                 strategy = genetic_strategies[len(data.players)]
                 first_player = data.players[0]
 
@@ -175,15 +189,16 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             # Only possible action is discard
             assert data.action == "discard"
             
-            ### POSSIBLE BUG: could ignore other players' actions while waiting for my state
             if data.lastPlayer != playerName:
                 # Get current state
                 s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
                 state = s.recv(DATASIZE)
                 state = GameData.GameData.deserialize(state)
                 while type(state) is not GameData.ServerGameStateData:
-                    print(f"Received object of type: {type(state)} while discarding")
+                    # If a different message is received, it is saved in a list and it will be processed later
+                    received_unexpected.append(state)
                     state = s.recv(DATASIZE)
+                    state = GameData.GameData.deserialize(state)
                 # Update internal state according to performed action
                 player.update_other_players(GameData.ClientPlayerDiscardCardRequest(data.lastPlayer, data.cardHandIndex), state)
             # Check if it's my turn and, if so, play
@@ -192,7 +207,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
         if type(data) is GameData.ServerPlayerMoveOk:
             dataOk = True
-            ### POSSIBLE BUG: could ignore other players' actions while waiting for my state
 
             if data.lastPlayer != playerName:
                 # Get current state
@@ -200,8 +214,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 state = s.recv(DATASIZE)
                 state = GameData.GameData.deserialize(state)
                 while type(state) is not GameData.ServerGameStateData:
-                    print(f"Received object of type: {type(state)} while playing ok")
+                    # If a different message is received, it is saved in a list and it will be processed later
+                    received_unexpected.append(state)
                     state = s.recv(DATASIZE)
+                    state = GameData.GameData.deserialize(state)
                 # Update internal state according to performed action
                 player.update_other_players(GameData.ClientPlayerPlayCardRequest(data.lastPlayer, data.cardHandIndex), state)
             # Check if it's my turn and, if so, play
@@ -210,7 +226,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
         if type(data) is GameData.ServerPlayerThunderStrike:
             dataOk = True
-            ### POSSIBLE BUG: could ignore other players' actions while waiting for my state
 
             if data.lastPlayer != playerName:
                 # Get current state
@@ -218,8 +233,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 state = s.recv(DATASIZE)
                 state = GameData.GameData.deserialize(state)
                 while type(state) is not GameData.ServerGameStateData:
-                    print(f"Received object of type: {type(state)} while playing wrong")
+                    # If a different message is received, it is saved in a list and it will be processed later
+                    received_unexpected.append(state)
                     state = s.recv(DATASIZE)
+                    state = GameData.GameData.deserialize(state)
                 # Update internal state according to performed action
                 player.update_other_players(GameData.ClientPlayerPlayCardRequest(data.lastPlayer, data.cardHandIndex), state)
             # Check if it's my turn and, if so, play
@@ -228,21 +245,22 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             
         if type(data) is GameData.ServerHintData:
             dataOk = True
-            ### POSSIBLE BUG: could ignore other players' actions while waiting for my state
 
-            if data.source != playerName:
+            if data.sender != playerName:
                 # Get current state
                 s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
                 state = s.recv(DATASIZE)
                 state = GameData.GameData.deserialize(state)
                 while type(state) is not GameData.ServerGameStateData:
-                    print(f"Received object of type: {type(state)} while hinting")
+                    # If a different message is received, it is saved in a list and it will be processed later
+                    received_unexpected.append(state)
                     state = s.recv(DATASIZE)
+                    state = GameData.GameData.deserialize(state)
                 # Update internal state according to performed action
                 if data.destination == playerName:
                     player.receive_hint(data.type, data.value, data.positions) 
                 else:
-                    player.update_other_players(GameData.ClientHintData(data.source, data.destination, data.type, data.value), state)
+                    player.update_other_players(data, state)
             # Check if it's my turn and, if so, play
             if data.player == playerName:
                 play(s, playerName, player, strategy)
@@ -252,15 +270,19 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             print(data.data)
         if type(data) is GameData.ServerGameOver:
             dataOk = True
-            print(data.message)
-            print(data.score)
-            print(data.scoreMessage)
+            #print(data.message)
+            print("Game over! Score: ", data.score)
+            #print(data.scoreMessage)
             stdout.flush()
             
             game_over = True
-            
-            print("Ready for a new game!")
+            played_games += 1
+            total_score += data.score
+            if played_games == number_of_games:
+                print("\n\n**** GAMES ARE OVER ****")
+                print(f" Average score: {total_score / number_of_games}")
+                break
+                
         if not dataOk:
             print("Unknown or unimplemented data type: " +  str(type(data)))
-        #print("[" + playerName + " - " + status + "]: ", end="")
         stdout.flush()

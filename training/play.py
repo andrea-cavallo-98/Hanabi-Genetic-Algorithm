@@ -31,7 +31,7 @@ genetic_strategies = {
 
 def evaluate_player(it, strategy, evaluation_type = "mirror"):
     score = 0
-    range_players = range(2,3)
+    range_players = range(3,4)
     for NUM_PLAYERS in range_players:
 
         if type(strategy) == list: # only one strategy as parameter
@@ -93,4 +93,4 @@ if __name__ == "__main__":
 
     #print(evaluate_player(100, genetic_strategies, "mirror"))
 
-    print(evaluate_player(100, genetic_strategies, "mixed"))
+    print(evaluate_player(100, genetic_strategies, "mirror"))

@@ -203,6 +203,7 @@ class Game(object):
         # It's the right turn to perform an action
         if player.name == data.sender:
             if data.handCardOrdered >= len(player.hand) or data.handCardOrdered < 0:
+                print(f"Error!! Player {player.name} trying to discard card {data.handCardOrdered} but he only has {len(player.hand)} cards!")
                 return (GameData.ServerActionInvalid("You don't have that many cards!"), None)
             card: Card = player.hand[data.handCardOrdered]
             if not self.__discardCard(card.id, player.name):

@@ -109,6 +109,15 @@ class OtherPlayer(object):
             self.n_cards = 4
         for _ in range(self.n_cards):
             self.cards.append(Card())
+    
+    def reset(self):
+        if self.num_players < 4:
+            self.n_cards = 5
+        else:
+            self.n_cards = 4
+        self.cards = []
+        for _ in range(self.n_cards):
+            self.cards.append(Card())
 
     def remove_card(self, pos, pick_card):
         del self.cards[pos]
@@ -220,6 +229,19 @@ class Player(object):
         self.other_players = [OtherPlayer(p, len(players)) for p in players if p != id]
         self.recent_hints = []
 
+    def reset(self):
+        if len(self.other_players) < 3:
+            self.n_cards = 5
+        else:
+            self.n_cards = 4
+        
+        self.cards = []
+        for _ in range(self.n_cards):
+            self.cards.append(Card())
+
+        for p in self.other_players:
+            p.reset()
+
     def compute_played_cards(self, state):
         # Compute how many cards have been played/discarded/drawn from deck
         played_cards = self.n_cards + len(state.discardPile) 
@@ -326,7 +348,7 @@ class Player(object):
             loc_p.remove_card(data.handCardOrdered, self.pick_new_card(state))
         
         elif type(data) == GameData.ServerHintData:
-            if int(data.destination) == self.id:
+            if data.destination == self.id:
                 self.receive_hint(data.type, data.value, data.positions)
             else:
                 for loc_p in self.other_players:
