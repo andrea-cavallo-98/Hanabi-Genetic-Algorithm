@@ -1,18 +1,10 @@
 
-from numpy import save
 import pandas as pd
 from matplotlib import pyplot as plt
-"""
-with open("results/log_0.csv", "r") as f:
-    row = f.read()
 
-with open("results/log_0.csv", "w") as f:
-    for c in row:
-        f.write(c)
-        if c == "]":
-            f.write("\n")
-
-"""
+###
+# Plot fitness for different islands during evolution
+###
 
 num_players = 5
 
@@ -22,8 +14,6 @@ df_0 = pd.read_csv(main_dir + "log_0.csv")
 df_1 = pd.read_csv(main_dir + "log_1.csv")
 df_2 = pd.read_csv(main_dir + "log_2.csv")
 df_3 = pd.read_csv(main_dir + "log_3.csv")
-
-### Commento casuale
 
 global_best = []
 save_next = False

@@ -1,5 +1,10 @@
 import random
 
+###
+# Define all possible actions and
+# select an action according to a strategy
+###
+
 def print_state(data):
     print("Current player: " + data.currentPlayer)
     print("Player hands: ")
@@ -30,7 +35,6 @@ def select_action(self, strategy, state):
     dest = None
 
     for rule in strategy:
-        #print(rule)
         if rule == 0:
             action, cardOrder = play_if_certain(self, state)
         elif rule == 1:
@@ -99,22 +103,12 @@ def select_action(self, strategy, state):
                 action = action[0]
 
         if action is not None:
-            """
-            print()
-            print("---------------------------------")
-            print(f"--- Played rule number {rule} ---")
-            print(f"--- Player {self.id} makes action {action}: cardOrder {cardOrder}, type {t}, val {val}, dest {dest}")
-            print("---------------------------------")
-            print()
-            """
             break
-    if action is None:
+    if action is None: # Should not happen
         print("+++ ACTION IS NONE +++")
         print("Strategy: ", strategy)
         print_state(state)
     return action, cardOrder, t, val, dest
-
-
 
 
 ###
@@ -280,8 +274,6 @@ def tell_useless_card(self, state):
         for loc_p in self.other_players:
             if str(loc_p.id) == p.name:
                 break
-        #if len(p.hand) != len(loc_p.cards):
-        #    print("Error in Tell Useless: Players: ", len(state.players), " Cards: ", len(loc_p.cards), len(p.hand), " Played cards: ", self.compute_played_cards(state))
         for i, c in enumerate(p.hand):
             if is_useless(c.color, c.value, state):
                 if len(loc_p.cards[i].value) != 1:
@@ -345,12 +337,6 @@ def tell_unknown_card(self, state):
         if str(loc_p.id) == p.name:
             break
     for i, c in enumerate(loc_p.cards):
-        #print(len(loc_p.cards), len(p.hand))
-        #if len(loc_p.cards) != len(p.hand):
-        #    print("Error in Tell Unknown: Current player: ", p.name, " Players: ", len(state.players), " Cards: ", len(loc_p.cards), len(p.hand), " Played cards: ", self.compute_played_cards(state))
-        #    print_state(state)
-        #    for c in self.cards:
-        #        print(c.value, c.color)
         if len(c.value) != 1:
             return "hint", "value", p.hand[i].value, p.name
         if len(c.color) != 1:
@@ -372,7 +358,6 @@ def tell_unambiguous(self, state):
         for c in available_colors:
             score = loc_p.score_unambiguous_hint("color", c, [i for i in range(len(p.hand)) if p.hand[i].color == c], 
                                                     state, [i for i in range(len(p.hand)) if is_playable(p.hand[i].color, p.hand[i].value, state)])
-            #print(f"Score for hint color: {c}, player: {p.name} --> score: {score}")
             if score > best_score:
                 best_score = score
                 best_hint = { "t": "color", "val": c, "dest": p.name }
@@ -381,7 +366,6 @@ def tell_unambiguous(self, state):
         for v in available_values:
             score = loc_p.score_unambiguous_hint("value", v, [i for i in range(len(p.hand)) if p.hand[i].value == v], 
                                                     state, [i for i in range(len(p.hand)) if is_playable(p.hand[i].color, p.hand[i].value, state)])
-            #print(f"Score for hint value: {v}, player: {p.name} --> score: {score}")
             if score > best_score:
                 best_score = score
                 best_hint = { "t": "value", "val": v, "dest": p.name }

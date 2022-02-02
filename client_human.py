@@ -7,6 +7,9 @@ import socket
 from constants import *
 import os
 
+###
+# Basic client file to allow human play
+###
 
 if len(argv) < 4:
     print("You need the player name to start the game.")

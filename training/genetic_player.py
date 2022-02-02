@@ -1,7 +1,13 @@
-import random
 import GameData
 from copy import deepcopy
 import rules
+
+###
+# Implementation of a class for a player. The player keeps track of the 
+# information about his own cards, the information that other players have
+# about their own cards, and is able to perform an action according to 
+# a selected strategy
+###
 
 
 class Card(object):
@@ -64,6 +70,7 @@ class Card(object):
         return True                        
 
     def score_useless(self, state):
+        # probability of card being useless
         score = 0
         for col in self.color:
             for val in self.value:
@@ -87,6 +94,7 @@ class Card(object):
         return score / (len(self.color) * len(self.value))               
 
 
+## Class to model the other players (to track what they know about their cards)
 class OtherPlayer(object):
     def __init__(self, id, num_players) -> None:
         super().__init__()
@@ -108,7 +116,6 @@ class OtherPlayer(object):
             self.n_cards -= 1
 
     def receive_hint(self, t, value, positions):
-        #print(f"--- Player {self.id} receiving hint: type {t}, v {value}, positions {positions}")
         if t == "color":
             for p in range(self.n_cards):
                 if p in positions:
@@ -124,6 +131,8 @@ class OtherPlayer(object):
                     self.cards[p].remove_value(value)
 
     def score_hint(self, t, value, positions, state):
+        # score a received hint based on how much information it provides (i.e.
+        # how many possible values/colors for cards are eliminated)
         score = 0
 
         cards_copy = deepcopy(self.cards)
@@ -155,6 +164,8 @@ class OtherPlayer(object):
     
     
     def score_unambiguous_hint(self, t, value, positions, state, playable):
+        # score a hint trying to maximize the probability of being playable of a playable card
+        # and to minimize the probability of being playable of a non-playable card
         score = 0.0
 
         cards_copy = deepcopy(self.cards)
@@ -191,7 +202,7 @@ class OtherPlayer(object):
         return score
 
 
-
+## Main class for a player
 class Player(object):
     def __init__(self, id, num_players) -> None:
         super().__init__()
@@ -209,6 +220,7 @@ class Player(object):
         self.recent_hints = []
 
     def compute_played_cards(self, state):
+        # Count how many cards have been played
         played_cards = self.n_cards + len(state.discardPile) 
         for p in state.players:
             played_cards += len(p.hand)
@@ -216,11 +228,8 @@ class Player(object):
             played_cards += len(state.tableCards[pos])
         return played_cards
 
-
-
-
     def play(self, state, strategy):
-        
+        # Perform an action depending on the selected strategy
         action = None
         cardOrder = None
         t = None

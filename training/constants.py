@@ -1,4 +1,8 @@
 
+###
+# Parameters to set for the genetic algorithm
+###
+
 NUM_ACTIONS = 29
 GENOME_LENGTH = NUM_ACTIONS
 POPULATION_SIZE = 25

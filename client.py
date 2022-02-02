@@ -9,6 +9,12 @@ import os
 from genetic_player import Player
 from rules import print_state
 
+###
+# File to define a client that interacts with the server to play
+# according to the strategy evolved with the genetic algorithm
+###
+
+
 
 if len(argv) < 4:
     print("You need the player name to start the game.")

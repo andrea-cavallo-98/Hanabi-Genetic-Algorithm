@@ -2,13 +2,17 @@ import copy
 import multiprocessing
 import os
 import shutil
-
 import numpy as np
 from play import evaluate_player
 import genetic_algorithm as ga
 from constants import ELITISM_SIZE, NUM_ACTIONS, GENOME_LENGTH, POPULATION_SIZE, OFFSPRING_SIZE, EVALUATION_TYPE, \
     MUTATION_PROBABILITY, EVALUATION_IT, NUM_GENERATIONS, NUM_ISLANDS, MIGRATION_INTERVAL, MIGRATION_SIZE, LOAD_CHECKPOINT, \
         STARTING_SPLIT
+
+###
+# Implementation of an island model genetic algorithm to optimize the order of
+# the rules for the Hanabi player
+###
 
 class Population:
     def __init__(self, population_size, individual_size, mutation_rate, fitness_function, id, checkpoint_dir):
@@ -40,6 +44,7 @@ class Population:
         return ga.parent_selection(self.individuals, self.fitness)
 
     def select(self, k):
+        # Used for migration
         weights = -self.fitness[:self.population_size]
         weights = weights - weights.min() + 1
         weights = weights / weights.sum()
@@ -58,9 +63,7 @@ class Population:
         self.individuals = np.copy(self.individuals[self.fitness.argsort()[:]][:self.population_size])
 
     def run(self, it, f):
-
-        #if (self.individuals.shape != (self.population_size, self.individual_size)):
-        #    print(f"### Something's wrong! ### Expected shape: {self.population_size},{self.individual_size} - Real shape: {self.individuals.shape}")
+        # function to evolve a single island for one generation
 
         self.fitness = np.array([evaluate_player(EVALUATION_IT, list(o), EVALUATION_TYPE) for o in self.individuals])
         self.individuals = np.copy(self.individuals[self.fitness.argsort()[:]][:self.population_size])
@@ -111,6 +114,7 @@ class World:
         self.islands = [Population(population_size, individual_size, mutation_rate, fitness_function, id, self.checkpoint_dir) for id in range(world_size)]
 
     def migrate(self):
+        # Perform migrations among islands
         migrant_groups = []
 
         for island in self.islands:
@@ -154,7 +158,7 @@ class World:
             best_individual = None
             best_score = 0
 
-            if LOAD_CHECKPOINT:
+            if LOAD_CHECKPOINT: # set previous best score and best individual
                 best_score = -17.16
                 best_individual = [1.0, 15.0, 12.0, 22.0, 24.0, 25.0, 21.0, 10.0, 8.0, 7.0, 9.0, 27.0, 5.0, 23.0, 26.0, 20.0, 17.0, 18.0, 14.0, 19.0, 28.0, 3.0, 0.0, 2.0, 6.0, 11.0, 4.0, 13.0, 16.0]
                 for island in self.islands:
@@ -167,6 +171,7 @@ class World:
 
 
             for split in range(STARTING_SPLIT, splits):
+                # Evolve the islands in parallel
                 with multiprocessing.Pool() as pool:
                     self.islands = pool.map(self.run_parallel_island, self.islands)
 

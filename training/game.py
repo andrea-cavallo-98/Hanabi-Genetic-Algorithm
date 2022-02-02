@@ -2,6 +2,11 @@ from copy import deepcopy
 import random
 import GameData
 
+###
+# Implementation of the Hanabi game. There are some differences with respect to the
+# game.py file outside the "training" folder.
+###
+
 class Card(object):
     def __init__(self, id, value, color) -> None:
         super().__init__()
@@ -260,8 +265,6 @@ class Game(object):
         #hand = []
         for i in range(len(destPlayer.hand)):
 
-            #hand.append((destPlayer.hand[i].color, str(destPlayer.hand[i].value)))
-
             if data.type == "color" or data.type == "colour":
                 if data.value == destPlayer.hand[i].color:
                     positions.append(i)
@@ -277,15 +280,11 @@ class Game(object):
                 return GameData.ServerInvalidDataReceived(data="Sender cannot be destination!"), None
 
         if len(positions) == 0:
-            #return GameData.ServerInvalidDataReceived(data="You cannot give hints about cards that the other person does not have. Type: " + str(data.type) + " value: " + str(data.value) + " hand: " + str(hand)), None
             return GameData.ServerInvalidDataReceived(data="You cannot give hints about cards that the other person does not have."), None
         self.__nextTurn()
         self.__noteTokens += 1
-        #print("Player " + data.sender + " providing hint to " + data.destination + ": cards with " + data.type + " " + str(data.value) + " are in positions: " + str(positions))
         self.__gameOver, self.__score = self.__checkGameEnded()
         if self.__gameOver:
-            #print("Game over, people.")
-            #print("Score: " + str(self.__score))
             return (None, GameData.ServerGameOver(self.__score, ""))
         return None, GameData.ServerHintData(data.sender, data.destination, data.type, data.value, positions)
 
@@ -323,9 +322,7 @@ class Game(object):
     def start(self, seed):
         random.Random(seed).shuffle(self.__cardsToDraw)
         if len(self.__players) < 2:
-            #print("Not enough players!")
             return
-        #print("Ok, let's start the game!")
         if len(self.__players) < 4:
             for p in self.__players:
                 for _ in range(5):
@@ -375,7 +372,6 @@ class Game(object):
         if len(self.__cardsToDraw) == 0:
             return
         card = self.__cardsToDraw.pop()
-        #print("Cards to draw: ", len(self.__cardsToDraw))
         for p in self.__players:
             if p.name == playerName:
                 p.hand.append(card)

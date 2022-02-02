@@ -2,6 +2,15 @@ import GameData
 from copy import deepcopy
 import rules
 
+###
+# Implementation of a class for a player. The player keeps track of the 
+# information about his own cards, the information that other players have
+# about their own cards, and is able to perform an action according to 
+# a selected strategy.
+# There are some differences with respect to the file genetic_player.py
+# in the folder "training"
+###
+
 
 class Card(object):
     def __init__(self) -> None:
@@ -63,6 +72,7 @@ class Card(object):
         return True                        
 
     def score_useless(self, state):
+        # probability of card being useless
         score = 0
         for col in self.color:
             for val in self.value:
@@ -85,7 +95,8 @@ class Card(object):
                         continue
         return score / (len(self.color) * len(self.value))               
 
-
+## Class to describe other players (used to track what they know
+# about their cards)
 class OtherPlayer(object):
     def __init__(self, id, num_players) -> None:
         super().__init__()
@@ -107,7 +118,6 @@ class OtherPlayer(object):
             self.n_cards -= 1
 
     def receive_hint(self, t, value, positions):
-        #print(f"--- Player {self.id} receiving hint: type {t}, v {value}, positions {positions}")
         if t == "color":
             for p in range(self.n_cards):
                 if p in positions:
@@ -123,6 +133,8 @@ class OtherPlayer(object):
                     self.cards[p].remove_value(value)
 
     def score_hint(self, t, value, positions, state):
+        # Score a possible hint based on how much information it provides
+        # (i.e. how many values/colors for cards are discarded)
         score = 0
 
         cards_copy = deepcopy(self.cards)
@@ -154,6 +166,8 @@ class OtherPlayer(object):
     
     
     def score_unambiguous_hint(self, t, value, positions, state, playable):
+        # score a possible hint trying to maximize the probability of being playable of playable cards
+        # and minimize the probability of being playable of non-playable cards
         score = 0.0
 
         cards_copy = deepcopy(self.cards)
@@ -207,6 +221,7 @@ class Player(object):
         self.recent_hints = []
 
     def compute_played_cards(self, state):
+        # Compute how many cards have been played/discarded/drawn from deck
         played_cards = self.n_cards + len(state.discardPile) 
         for p in state.players:
             played_cards += len(p.hand)
@@ -215,7 +230,7 @@ class Player(object):
         return played_cards
 
     def pick_new_card(self, state):
-        """ Check if player should pick a new card or if deck is finished """
+        # Check if player should pick a new card or if deck is finished
         played_cards = self.n_cards
         for p in state.players:
             played_cards += len(p.hand)
@@ -233,6 +248,8 @@ class Player(object):
 
     def play(self, state, strategy):
         
+        # Select an action according to a given strategy and perform it
+
         action = None
         cardOrder = None
         t = None

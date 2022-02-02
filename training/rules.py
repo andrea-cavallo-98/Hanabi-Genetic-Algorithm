@@ -1,5 +1,10 @@
 import random
 
+###
+# Define all possible actions and
+# select an action according to a strategy
+###
+
 def print_state(data):
     print("Current player: " + data.currentPlayer)
     print("Player hands: ")
@@ -17,10 +22,6 @@ def print_state(data):
     print("Note tokens used: " + str(data.usedNoteTokens) + "/8")
     print("Storm tokens used: " + str(data.usedStormTokens) + "/3")
 
-###
-# Select action according to a strategy
-###
-
 
 def select_action(self, strategy, state):
     action = None
@@ -28,18 +29,8 @@ def select_action(self, strategy, state):
     t = None
     val = None
     dest = None
-    """
-    genetic_strategies = {
-        2 : [1.0, 15.0, 6.0, 22.0, 24.0, 25.0, 21.0, 9.0, 10.0, 27.0, 2.0, 7.0, 
-                    11.0, 5.0, 26.0, 16.0, 4.0, 23.0, 17.0, 13.0, 3.0, 28.0],
-        3 : [ 5., 12.,  0. , 9.,22., 15., 11. , 1. , 4., 26., 24. ,20. ,28.],
-        4 : [10.0, 1.0, 22.0, 15.0, 21.0, 13.0, 5.0, 26.0, 4.0, 6.0, 12.0, 16.0, 
-                    9.0, 23.0, 0.0, 7.0, 17.0, 2.0, 19.0, 28.0],
-        5 : [4.0, 10.0, 0.0, 11.0, 1.0, 12.0, 15.0, 24.0, 7.0, 14.0, 17.0, 28.0]
-    }
-    """
+
     for rule in strategy:
-        #print(rule)
         if rule == 0:
             action, cardOrder = play_if_certain(self, state)
         elif rule == 1:
@@ -108,23 +99,12 @@ def select_action(self, strategy, state):
                 action = action[0]
 
         if action is not None:
-            """
-            print()
-            print("---------------------------------")
-            print(f"--- Played rule number {rule} ---")
-            print(f"--- Player {self.id} makes action {action}: cardOrder {cardOrder}, type {t}, val {val}, dest {dest}")
-            print("---------------------------------")
-            print()
-            """
             break
-    if action is None:
+    if action is None: # Should not happen
         print("+++ ACTION IS NONE +++")
         print("Strategy: ", strategy)
         print_state(state)
     return action, cardOrder, t, val, dest
-
-
-
 
 ###
 # Rules
@@ -289,8 +269,6 @@ def tell_useless_card(self, state):
         for loc_p in self.other_players:
             if str(loc_p.id) == p.name:
                 break
-        #if len(p.hand) != len(loc_p.cards):
-        #    print("Error in Tell Useless: Players: ", len(state.players), " Cards: ", len(loc_p.cards), len(p.hand), " Played cards: ", self.compute_played_cards(state))
         for i, c in enumerate(p.hand):
             if is_useless(c.color, c.value, state):
                 if len(loc_p.cards[i].value) != 1:
@@ -354,12 +332,6 @@ def tell_unknown_card(self, state):
         if str(loc_p.id) == p.name:
             break
     for i, c in enumerate(loc_p.cards):
-        #print(len(loc_p.cards), len(p.hand))
-        #if len(loc_p.cards) != len(p.hand):
-        #    print("Error in Tell Unknown: Current player: ", p.name, " Players: ", len(state.players), " Cards: ", len(loc_p.cards), len(p.hand), " Played cards: ", self.compute_played_cards(state))
-        #    print_state(state)
-        #    for c in self.cards:
-        #        print(c.value, c.color)
         if len(c.value) != 1:
             return "hint", "value", p.hand[i].value, p.name
         if len(c.color) != 1:
@@ -381,7 +353,6 @@ def tell_unambiguous(self, state):
         for c in available_colors:
             score = loc_p.score_unambiguous_hint("color", c, [i for i in range(len(p.hand)) if p.hand[i].color == c], 
                                                     state, [i for i in range(len(p.hand)) if is_playable(p.hand[i].color, p.hand[i].value, state)])
-            #print(f"Score for hint color: {c}, player: {p.name} --> score: {score}")
             if score > best_score:
                 best_score = score
                 best_hint = { "t": "color", "val": c, "dest": p.name }
@@ -390,7 +361,6 @@ def tell_unambiguous(self, state):
         for v in available_values:
             score = loc_p.score_unambiguous_hint("value", v, [i for i in range(len(p.hand)) if p.hand[i].value == v], 
                                                     state, [i for i in range(len(p.hand)) if is_playable(p.hand[i].color, p.hand[i].value, state)])
-            #print(f"Score for hint value: {v}, player: {p.name} --> score: {score}")
             if score > best_score:
                 best_score = score
                 best_hint = { "t": "value", "val": v, "dest": p.name }

@@ -4,6 +4,13 @@ from play import evaluate_player
 from constants import NUM_ACTIONS, GENOME_LENGTH, POPULATION_SIZE, OFFSPRING_SIZE, TOURNAMEN_SIZE, \
     MUTATION_PROBABILITY, EVALUATION_IT, NUM_GENERATIONS, ELITISM_SIZE
 
+###
+# Provide useful functions for the genetic algorithm (such as parent selection,
+# crossover and mutation).
+# The main launches a genetic algorithm (not used in this project, see island_model_ga.py) 
+###
+
+
 
 def parent_selection(population, pop_fitness):
     tournament = np.random.randint(0, len(population), size=(TOURNAMEN_SIZE,))
@@ -18,7 +25,6 @@ def parent_selection(population, pop_fitness):
 def xover(parent1, parent2): 
     offspring = np.zeros(parent1.shape) - 1
     xover_type = np.random.choice([0,1,2]) # randomly select which crossover type to execute
-    #xover_type = np.random.choice([0]) # randomly select which crossover type to execute
 
     if xover_type == 0: # cycle crossover
         i = np.random.randint(0, GENOME_LENGTH - 1)
@@ -70,7 +76,6 @@ def mutate(parent):
         else:
             new_parent = offspring.copy()
         mutation = np.random.choice([0,0,1,2,3]) 
-        #mutation = np.random.choice([0]) 
         # randomly choose which type of mutation to perform (more likely
         # to perform easier mutation)
 
