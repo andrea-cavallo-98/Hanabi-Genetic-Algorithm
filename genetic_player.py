@@ -251,21 +251,18 @@ class Player(object):
             played_cards += len(state.tableCards[pos])
         return played_cards
 
-    def pick_new_card(self, state):
+    def pick_new_card(self, drawn_cards):
         # Check if player should pick a new card or if deck is finished
-        played_cards = self.n_cards
-        for p in state.players:
-            played_cards += len(p.hand)
         if len(self.other_players) < 3:
-            if played_cards == (len(self.other_players) + 1) * 5:
-                return True
-            else:
+            if drawn_cards > 50 - (len(self.other_players) + 1) * 5:
                 return False
+            else:
+                return True
         else:
-            if played_cards == (len(self.other_players) + 1) * 4:
-                return True
-            else:
+            if drawn_cards > 50 - (len(self.other_players) + 1) * 4:
                 return False
+            else:
+                return True
     
 
     def play(self, state, strategy):
@@ -334,18 +331,18 @@ class Player(object):
                 else:
                     self.cards[p].remove_value(value)
 
-    def update_other_players(self, data, state):
+    def update_other_players(self, data, drawn_cards):
         if type(data) == GameData.ClientPlayerDiscardCardRequest:
             for loc_p in self.other_players:
                 if str(loc_p.id) == data.sender:
                     break
-            loc_p.remove_card(data.handCardOrdered, self.pick_new_card(state))
+            loc_p.remove_card(data.handCardOrdered, self.pick_new_card(drawn_cards))
         
         elif type(data) == GameData.ClientPlayerPlayCardRequest:
             for loc_p in self.other_players:
                 if str(loc_p.id) == data.sender:
                     break
-            loc_p.remove_card(data.handCardOrdered, self.pick_new_card(state))
+            loc_p.remove_card(data.handCardOrdered, self.pick_new_card(drawn_cards))
         
         elif type(data) == GameData.ServerHintData:
             if data.destination == self.id:

@@ -9,14 +9,14 @@ python server.py <min-number-of-players>
 ```
 To start the client for the genetic player:
 ```
-python client.py <IP-address> <port> <player-name>
+python client.py <IP-address> <port> <player-name> <number-of-games>
 ```
-The player will automatically send a message to the server saying he is ready to play and he will perform his move when his turn comes. To create a manually controlled player, which will wait for user input before playing:
+The player will automatically send a message to the server saying he is ready to play and he will perform his move when his turn comes. The player will keep playing for the specified number of games and, then, disconnect from the server. To create a manually controlled player, which will wait for user input before playing:
 ```
 python client_human.py <IP-address> <port> <player-name>
 ```
 It is possible to create games with any combination of genetic and human players.
 
 ## Algorithm
-The folder [`training`](training) contains the files to train the genetic algorithm to evolve the player. In particular, the file containing the algorithm is [`island_model_ga.py`](training/island_model_ga.py). The goal of the algorithm is to select the best order for a set of predefined rules to play the game. The performances are evaluated by simulating 50 games for each individual and averaging the results. Individuals are evaluated both in self-play and in mixed-play (i.e. playing with players using different strategies). A detailed description of the implemented algorithm is available in the [report](Computational_Intelligence_report.pdf).
+The folder [`training`](training) contains the files to train the genetic algorithm to evolve the player. In particular, the file containing the algorithm is [`island_model_ga.py`](training/island_model_ga.py). The goal of the algorithm is to select the best order for a set of predefined rules to play the game. The performances are evaluated by simulating 50 games for each individual and averaging the results. Individuals are evaluated both in self-play and in mixed-play (i.e. playing with players using different strategies). A detailed description of the implemented algorithm, the rules for the player and the final results is available in the [report](Computational_Intelligence_report.pdf).
 

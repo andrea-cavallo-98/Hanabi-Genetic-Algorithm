@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 
 from sys import argv, stdout
-from threading import Thread
 import GameData
 import socket
 from constants import *
-import os
 from genetic_player import Player
-from rules import print_state
 
 ###
 # File to define a client that interacts with the server to play
@@ -42,64 +39,8 @@ genetic_strategies = {
     5 : [4.0, 10.0, 0.0, 11.0, 1.0, 12.0, 15.0, 24.0, 7.0, 14.0, 17.0, 28.0]
 }
 
-def manageInput():
-    global run
-    global status
-    while run:
-        command = input()
-        # Choose data to send
-        if command == "exit":
-            run = False
-            os._exit(0)
-        elif command == "ready" and status == statuses[0]:
-            s.send(GameData.ClientPlayerStartRequest(playerName).serialize())
-        elif command == "show" and status == statuses[1]:
-            s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
-        elif command.split(" ")[0] == "discard" and status == statuses[1]:
-            try:
-                cardStr = command.split(" ")
-                cardOrder = int(cardStr[1])
-                s.send(GameData.ClientPlayerDiscardCardRequest(playerName, cardOrder).serialize())
-            except:
-                print("Maybe you wanted to type 'discard <num>'?")
-                continue
-        elif command.split(" ")[0] == "play" and status == statuses[1]:
-            try:
-                cardStr = command.split(" ")
-                cardOrder = int(cardStr[1])
-                s.send(GameData.ClientPlayerPlayCardRequest(playerName, cardOrder).serialize())
-            except:
-                print("Maybe you wanted to type 'play <num>'?")
-                continue
-        elif command.split(" ")[0] == "hint" and status == statuses[1]:
-            try:
-                destination = command.split(" ")[2]
-                t = command.split(" ")[1].lower()
-                if t != "colour" and t != "color" and t != "value":
-                    print("Error: type can be 'color' or 'value'")
-                    continue
-                value = command.split(" ")[3].lower()
-                if t == "value":
-                    value = int(value)
-                    if int(value) > 5 or int(value) < 1:
-                        print("Error: card values can range from 1 to 5")
-                        continue
-                else:
-                    if value not in ["green", "red", "blue", "yellow", "white"]:
-                        print("Error: card color can only be green, red, blue, yellow or white")
-                        continue
-                s.send(GameData.ClientHintData(playerName, destination, t, value).serialize())
-            except:
-                print("Maybe you wanted to type 'hint <type> <destinatary> <value>'?")
-                continue
-        elif command == "":
-            print("[" + playerName + " - " + status + "]: ", end="")
-        else:
-            print("Unknown command: " + command)
-            continue
-        stdout.flush()
 
-def play(s, playerName, player, strategy):
+def play(s, playerName, player, strategy, received_unexpected):
     """
     Player performs an action 
     """
@@ -108,8 +49,10 @@ def play(s, playerName, player, strategy):
     state = s.recv(DATASIZE)
     state = GameData.GameData.deserialize(state)
     while type(state) is not GameData.ServerGameStateData:
-        print(f"Received object of type: {type(state)}")
+        # If a different message is received, it is saved in a list and it will be processed later
+        received_unexpected.append(state)
         state = s.recv(DATASIZE)
+        state = GameData.GameData.deserialize(state)
     # Choose move according to strategy and current state
     data = player.play(state, strategy)
     # Perform action
@@ -125,7 +68,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     if type(data) is GameData.ServerPlayerConnectionOk:
         print("Connection accepted by the server. Welcome " + playerName)
     print("[" + playerName + " - " + status + "]: ", end="")
-    #Thread(target=manageInput).start()
 
     # Send the "ready" message
     s.send(GameData.ClientPlayerStartRequest(playerName).serialize())
@@ -136,14 +78,16 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     received_unexpected = []
     total_score = 0
     played_games = 0
+    drawn_cards = 0
 
     while run:
         
         if game_over:
             game_over = False
+            drawn_cards = 0
             player.reset()
             if first_player == playerName: # If I have to start, I play a move
-                play(s, playerName, player, strategy)
+                play(s, playerName, player, strategy, received_unexpected)
 
         dataOk = False
         if len(received_unexpected) > 0:
@@ -174,7 +118,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 first_player = data.players[0]
 
             if first_player == playerName: # If I have to start, I play a move
-                play(s, playerName, player, strategy)
+                play(s, playerName, player, strategy, received_unexpected)
 
         if type(data) is GameData.ServerGameStateData:
             dataOk = True
@@ -185,94 +129,58 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             print(data.message)
 
         if type(data) is GameData.ServerActionValid:
+            drawn_cards += 1
             dataOk = True
             # Only possible action is discard
             assert data.action == "discard"
             
             if data.lastPlayer != playerName:
-                # Get current state
-                s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
-                state = s.recv(DATASIZE)
-                state = GameData.GameData.deserialize(state)
-                while type(state) is not GameData.ServerGameStateData:
-                    # If a different message is received, it is saved in a list and it will be processed later
-                    received_unexpected.append(state)
-                    state = s.recv(DATASIZE)
-                    state = GameData.GameData.deserialize(state)
                 # Update internal state according to performed action
-                player.update_other_players(GameData.ClientPlayerDiscardCardRequest(data.lastPlayer, data.cardHandIndex), state)
+                player.update_other_players(GameData.ClientPlayerDiscardCardRequest(data.lastPlayer, data.cardHandIndex), drawn_cards)
             # Check if it's my turn and, if so, play
             if data.player == playerName:
-                play(s, playerName, player, strategy)
+                play(s, playerName, player, strategy, received_unexpected)
 
         if type(data) is GameData.ServerPlayerMoveOk:
+            drawn_cards += 1
             dataOk = True
 
             if data.lastPlayer != playerName:
-                # Get current state
-                s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
-                state = s.recv(DATASIZE)
-                state = GameData.GameData.deserialize(state)
-                while type(state) is not GameData.ServerGameStateData:
-                    # If a different message is received, it is saved in a list and it will be processed later
-                    received_unexpected.append(state)
-                    state = s.recv(DATASIZE)
-                    state = GameData.GameData.deserialize(state)
-                # Update internal state according to performed action
-                player.update_other_players(GameData.ClientPlayerPlayCardRequest(data.lastPlayer, data.cardHandIndex), state)
+                player.update_other_players(GameData.ClientPlayerPlayCardRequest(data.lastPlayer, data.cardHandIndex), drawn_cards)
             # Check if it's my turn and, if so, play
             if data.player == playerName:
-                play(s, playerName, player, strategy)
+                play(s, playerName, player, strategy, received_unexpected)
 
         if type(data) is GameData.ServerPlayerThunderStrike:
+            drawn_cards += 1
             dataOk = True
 
             if data.lastPlayer != playerName:
-                # Get current state
-                s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
-                state = s.recv(DATASIZE)
-                state = GameData.GameData.deserialize(state)
-                while type(state) is not GameData.ServerGameStateData:
-                    # If a different message is received, it is saved in a list and it will be processed later
-                    received_unexpected.append(state)
-                    state = s.recv(DATASIZE)
-                    state = GameData.GameData.deserialize(state)
                 # Update internal state according to performed action
-                player.update_other_players(GameData.ClientPlayerPlayCardRequest(data.lastPlayer, data.cardHandIndex), state)
+                player.update_other_players(GameData.ClientPlayerPlayCardRequest(data.lastPlayer, data.cardHandIndex), drawn_cards)
             # Check if it's my turn and, if so, play
             if data.player == playerName:
-                play(s, playerName, player, strategy)
+                play(s, playerName, player, strategy, received_unexpected)
             
         if type(data) is GameData.ServerHintData:
             dataOk = True
 
             if data.sender != playerName:
-                # Get current state
-                s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
-                state = s.recv(DATASIZE)
-                state = GameData.GameData.deserialize(state)
-                while type(state) is not GameData.ServerGameStateData:
-                    # If a different message is received, it is saved in a list and it will be processed later
-                    received_unexpected.append(state)
-                    state = s.recv(DATASIZE)
-                    state = GameData.GameData.deserialize(state)
                 # Update internal state according to performed action
                 if data.destination == playerName:
                     player.receive_hint(data.type, data.value, data.positions) 
                 else:
-                    player.update_other_players(data, state)
+                    player.update_other_players(data, drawn_cards)
             # Check if it's my turn and, if so, play
             if data.player == playerName:
-                play(s, playerName, player, strategy)
+                play(s, playerName, player, strategy, received_unexpected)
         
         if type(data) is GameData.ServerInvalidDataReceived:
             dataOk = True
             print(data.data)
         if type(data) is GameData.ServerGameOver:
             dataOk = True
-            #print(data.message)
             print("Game over! Score: ", data.score)
-            #print(data.scoreMessage)
             stdout.flush()
             
             game_over = True

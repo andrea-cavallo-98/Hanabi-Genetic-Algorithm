@@ -262,7 +262,6 @@ def tell_playable_card(self, state):
                 if str(loc_p.id) == p.name:
                     break
             for i, c in enumerate(p.hand):
-                #print("Index: ", i, " player has cards: ", len(loc_p.cards), " real player has cards: ", len(p.hand))
                 if is_playable(c.color, c.value, state) and not loc_p.cards[i].is_playable(state.tableCards):
                     if len(loc_p.cards[i].value) != 1:
                         return "hint", "value", c.value, p.name
